@@ -37,6 +37,9 @@ _Disclaimer: I'm not encouraging/supporting piracy, this is for information only
     - [Setup Radarr](#setup-radarr)
       - [Docker container](#radarr-docker-container)
       - [Configuration](#radarr-configuration)
+    - [Setup FlareSolverr](#setup-flaresolverr)
+      - [Docker container](#flaresolverr-docker-container)
+      - [Configuration in Prowlarr](#flaresolverr-configuration-in-prowlarr)
     - [Setup Prowlarr](#setup-prowlarr)
       - [Docker container](#prowlarr-docker-container)
       - [Configuration](#prowlarr-configuration)
@@ -56,6 +59,7 @@ _Disclaimer: I'm not encouraging/supporting piracy, this is for information only
         - [Configuration and usage](#portainer-configuration)
   - [Mobile Management](#mobile-management)
 
+
 ## Overview
 
 This is a quick guide on how to build a server with a [Servarr stack](https://wiki.servarr.com/)
@@ -69,6 +73,7 @@ This is composed of multiple tools working together to have an automated way to 
 - [OpenVPN Client](https://github.com/dperson/openvpn-client) (optional but highly recommended): the container is used by Deluge to encapsulate the incoming/outgoing traffic.
 - [Deluge](http://deluge-torrent.org/) handles torrent download.
 - [Prowlarr](https://prowlarr.com/): is an indexer manager/proxy built on the popular *arr .net/reactjs base stack to integrate with your various PVR apps. Prowlarr supports the management of both Torrent Trackers and Usenet Indexers.
+- [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr): is a proxy server to bypass Cloudflare and other challenges for indexers that are protected by them.
 - [Bazarr](https://www.bazarr.media/) is a companion application to Sonarr and Radarr. It manages and downloads subtitles based on your requirements. You define your preferences by TV show or movie and Bazarr takes care of everything for you.
 
 **Download orchestration**:
@@ -522,6 +527,50 @@ In `Connect` tab, we'll configure Sonarr to send notifications to Plex when a ne
 ![Sonarr Plex configuration](img/RadarrPlexConnect.png)
 
 
+
+***
+### Setup FlareSolverr
+
+[FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) is a proxy server to bypass Cloudflare protection. Many torrent indexers are behind Cloudflare, and Prowlarr needs FlareSolverr to be able to search on them.
+
+#### FlareSolverr Docker container
+
+```yaml
+  flaresolverr:
+    # DockerHub mirror flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - 'LOG_LEVEL=info'
+      - 'LOG_HTML=false'
+      - 'CAPTCHA_SOLVER=none'
+      - 'TZ=${TZ}'
+    ports:
+      - '8191:8191'
+    restart: unless-stopped
+```
+
+Then run the container with `docker-compose up -d --remove-orphans`.
+
+To follow container logs, run `docker-compose logs -f flaresolverr`.
+
+#### FlareSolverr Configuration in Prowlarr
+
+Once FlareSolverr is running, you need to configure Prowlarr to use it.
+
+1.  In the Prowlarr web UI, go to `Settings` -> `Indexers`.
+2.  Under the `Indexer Proxies` section, click the `+` to add a new proxy.
+3.  Fill in the details for FlareSolverr:
+    -   **Name**: `FlareSolverr`
+    -   **Tags**: `FlareSolverr`
+    -   **Host**: `http://YOUR.IP.ADDRESS:8191`
+    -   **Request Timeout**: `60`
+4.  Click `Test` to verify the connection.
+5.  Click `Save`.
+
+Now, when you add an indexer in Prowlarr that requires FlareSolverr, you can select it by selecting the tag FlareSolverr in the tags section.
+
+
 ***
 ### Setup Prowlarr
 
@@ -588,7 +637,6 @@ Now on Sonar and Radarr in the Settings - Indexers Tab it will show the indexer 
 
 ***
 
-
 ### Setup Bazarr
 
 [Bazarr](https://www.bazarr.media/) hooks directly into Radarr and Sonarr and makes the process more effective and painless. If you don't care about subtitles go ahead and skip this step.
@@ -596,7 +644,6 @@ Now on Sonar and Radarr in the Settings - Indexers Tab it will show the indexer 
 #### Bazarr Docker container
 
 The docker file should look like this:
-
 
 ```yaml
   bazarr:

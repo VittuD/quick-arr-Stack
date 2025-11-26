@@ -103,7 +103,20 @@ services:
     volumes:
       - '${ROOT}/MediaCenter/config/plex/db:/config'
       - '${ROOT}/MediaCenter/config/plex/transcode:/transcode'
-      - '${HDDSTORAGE}/Completed:/MediaCenterBox'
+      - '${HDDSTORAGE}/Completed:/MediaCenterBox'  
+
+  flaresolverr:
+    # DockerHub mirror flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - 'LOG_LEVEL=info'
+      - 'LOG_HTML=false'
+      - 'CAPTCHA_SOLVER=none'
+      - 'TZ=${TZ}'
+    ports:
+      - '8191:8191'
+    restart: unless-stopped
 
 
 ### Optional Containers
