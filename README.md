@@ -3,7 +3,7 @@
 TV shows and movies download, sorted, with the desired quality and subtitles, behind a VPN (optional), ready to watch, in a beautiful media player.
 All automated.
 
-On top of the original configurations added information related to the PureVPN configurations and added a wireguard docker to access the content of the media center outside the home network without the need to open the Plex port.
+This guide builds on the original configurations with additional information for PureVPN setup and includes a Wireguard Docker container to access the media center remotely without exposing the Plex port.
 
 
 _Disclaimer: I'm not encouraging/supporting piracy, this is for information only._
@@ -17,10 +17,10 @@ _Disclaimer: I'm not encouraging/supporting piracy, this is for information only
   - [Software stack](#software-stack)
   - [Installation guide](#installation-guide)
     - [Install docker and docker-compose](#install-docker-and-docker-compose)
-    - [Helpfull Docker Commands](#helpfull-docker-commands)
+    - [Helpful Docker Commands](#helpful-docker-commands)
     - [Clone the repository](#clone-the-repository)
     - [Setup environment variables](#setup-environment-variables)
-    - [Folder Setup](#folder-structure)
+    - [Folder Structure](#folder-structure)
     - [Setup a VPN Container](#setup-a-vpn-container)
       - [VPN Option](#vpn-option)
       - [purevpn.com custom setup](#purevpncom-custom-setup)
@@ -51,9 +51,9 @@ _Disclaimer: I'm not encouraging/supporting piracy, this is for information only
       - [Setup Overseerr](#overseerr-setup)
         - [Docker container](#overseerr-docker-container)
         - [Configuration and usage](#overseerr-configuration)
-      - [Setup Portainer](#portainer-setup)
-        - [Docker container](#portainer-docker-container)
-        - [Configuration and usage](#portainer-configuration)
+      - [Setup Arcane](#arcane-setup)
+        - [Docker container](#arcane-docker-container)
+        - [Configuration and usage](#arcane-configuration)
   - [Mobile Management](#mobile-management)
 
 ## Overview
@@ -83,11 +83,11 @@ This is composed of multiple tools working together to have an automated way to 
 
 **Optional**:
 
-- [Overseerr](https://overseerr.dev/):  is a free and open source software application for managing requests for your media library. It integrates with your existing services, such as Sonarr, Radarr, and Plex!
+- [Overseerr](https://overseerr.dev/): is a free and open source software application for managing requests for your media library. It integrates with your existing services, such as Sonarr, Radarr, and Plex!
 
-- [Wireguard](https://github.com/linuxserver/docker-wireguard): is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. This will allow us to connect to our home network  from anywhere and use the Plex app outside of our house without using Plex servers for routing.
+- [Wireguard](https://github.com/linuxserver/docker-wireguard): is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. This will allow us to connect to our home network from anywhere and use the Plex app outside of our house without using Plex servers for routing.
 
-- [Portainer](https://github.com/portainer/portainer): This is a lightweight service that allows us to monitor all of our containers, we can see the status, logs and manage them directly there.
+- [Arcane](https://github.com/getarcaneapp/arcane): A beautiful, intuitive interface for managing your Docker containers, images, networks, and volumes. No terminal required - monitor all containers, view status, logs and manage them directly.
 
 ## Hardware configuration
 
@@ -113,7 +113,7 @@ Make sure it works fine:
 
 Also, install docker-compose (see the [official instructions](https://docs.docker.com/compose/install/#install-compose)).
 
-### Helpfull Docker Commands
+### Helpful Docker Commands
 
 ```sh
 #Check the Status of all docker containers:
@@ -163,6 +163,16 @@ HDDSTORAGE=/home/{youruser}/Storage/ #update the {youruser} with your user path
 SERVERURL=auto
 #number of devices to generate configuration to connect to the wireguard vpn
 PEERS=7
+
+# Arcane
+#Application URL with the defined port
+APP_URL="http://localhost:9010"
+#Type of environment, this is our "live" environment so lets use production
+ENVIRONMENT=production
+#Random Encryption Key
+ENCRYPTION_KEY={your_encryption_key} #Run command: "openssl rand -base64 32" to generate a random key like dgx9U8oSegcUMb0mp3N/mMpYHB4ZYF+2m+ym6LYcCNg=
+#Random JWT Secret
+JWT_SECRET={your_jwt_secret} #Run command: "openssl rand -base64 32" to generate a random key like dgx9U8oSegcUMb0mp3N/mMpYHB4ZYF+2m+ym6LYcCNg=
 ```
 
 Things to notice:
@@ -206,7 +216,7 @@ After this Create 2 folders in the `Storage\Completed` folder, `Movies` and `TV`
 #### VPN Option
 
 If you do not own a VPN you can bypass this step.
-  - Is required to comment the highlighted lines in the `docker-compose.yml`
+  - It is required to comment the highlighted lines in the `docker-compose.yml`
  example:
  ```sh
     #ports:
@@ -265,7 +275,7 @@ Then run the container with `docker-compose up -d --remove-orphans`.
 
 To follow container logs, run `docker-compose logs -f vpn`.
 
-every time that you do changes in the VPN config file run `docker-compose restart vpn` this will force the container to restart and load the new settings
+Every time you make changes in the VPN config file run `docker-compose restart vpn` to force the container to restart and load the new settings
 
 ***
 
@@ -300,9 +310,9 @@ deluge:
 
 #### Deluge Configuration
 
-_Note_: If the bellow page does not open and you are using the VPN normally it means that something is wrong with the VPN itself!
+_Note_: If the below page does not open and you are using the VPN normally it means that something is wrong with the VPN itself!
 
-run `docker-compose restart deluge` everytime that you stop or start te VPN container as deluge dependes on it.
+Run `docker-compose restart deluge` every time you stop or start the VPN container as Deluge depends on it.
 
 
 You should be able to log in on the web UI (`localhost:8112`, replace `localhost` with your machine ip if needed).
@@ -444,8 +454,8 @@ Sonarr should be ready out of the box, there are multiple settings and configura
 
 ![Sonarr Root Folders](img/SonarRootFolders.png)
 
-`Download Clients` tab is where we'll configure links with our tdownload client Deluge.
-There are existing presets for these 2 that we'll fill with the proper configuration.
+`Download Clients` tab is where we'll configure links with our download client Deluge.
+There are existing presets for these that we'll fill with the proper configuration.
 
 Deluge configuration:
 
@@ -560,7 +570,7 @@ To follow container logs, run `docker-compose logs -f prowlarr`.
 Prowlarr web UI is available on port 9696(`localhost:9696`, replace `localhost` by your machine ip if needed).
 
 
-On login, it will request to set up a login method, anyone works, as an example i have used the forms option
+On login, it will request to set up a login method. Any option works; as an example, I have used the forms option
 
 ![Prowlarr login setup](img/prowlarrLogin.png)
 
@@ -644,14 +654,14 @@ At last, we are going to set this profile as default for Movies and TV shows at 
 Hit Save on the top of the page and move to the next step.
 
 
-Now go to the `Providers` tab. Here you can add all the providers that you choose from the provided list, for not I will use  [Open Subtitles](https://www.opensubtitles.org/). If you don't have an account head on over to the [Registration page](https://www.opensubtitles.org/en/newuser) and make a new account. 
+Now go to the `Providers` tab. Here you can add all the providers that you choose from the provided list. For now I will use [Open Subtitles](https://www.opensubtitles.org/). If you don't have an account head on over to the [Registration page](https://www.opensubtitles.org/en/newuser) and make a new account. 
 
 ![Bazarr Open Subtitles](img/bazarrProviderSetup.png)
 
 Hit Save on the top of the page and move to the next step.
 
 Now we are going to enable the Sonarr and Radarr integrations. Go to the Sonarr tab and hit the enabled toggle.
-Here we need to change the address to the `IP` otherwise Bazarr will not detect, change the IP address of your machine, in my example is the `192.168.0.144`, and set the Sonarr API key as we have done during the [Prowlarr configuration](#prowlarr-configuration) then hit test.
+Here we need to change the address to the `IP` otherwise Bazarr will not detect it. Change the IP address to your machine's IP (in my example it's `192.168.0.144`), and set the Sonarr API key as we have done during the [Prowlarr configuration](#prowlarr-configuration), then hit test.
 
 
 ![Bazarr Sonarr Configuration](img/bazarrSonarrConfiguration.png)
@@ -668,7 +678,7 @@ After this, all the required configurations are done and everything should work.
 
 #### Testing
 
-Go to Radarr to the `Movies` tab and click on `Add New`, search for a Movie, I'm going to use `The Last Man on Earth (1964)` as is a Public Domain Movie.
+Go to Radarr to the `Movies` tab and click on `Add New`, search for a Movie. I'm going to use `The Last Man on Earth (1964)` as it is a Public Domain Movie.
 This will automatically fill in all the required information. You can adapt these parameters as you see fit. Make sure that you define a `Monitor` type so the movie is automatically downloaded
 
 ![Adding The Last Man on Earth (1964) ](img/testingRadarr.png)
@@ -704,7 +714,7 @@ We'll use Wireguard Docker image from linuxserver [Docker image from linuxserver
 This container will allow you to connect to all your services outside your home network exposing only one port
 
 
-_Note_: It's required to open port 51820 in your router to be abbe to connect with the VPN to your home network.
+_Note_: It's required to open port 51820 in your router to be able to connect with the VPN to your home network.
 
 The following website has some example of how to port forward for most of routers: [portforward.com](https://portforward.com/router.htm)
 
@@ -818,52 +828,69 @@ after that fill the remaining settings with your desired configuration.
 
 ![Overseerr radar sample configuration](img/Overseerr_radarr_setup.png)
 
-#### Portainer Setup
+#### Arcane Setup
 
-We are going to use the official [Portainer Community Edition](https://github.com/portainer/portainer) image, this is a lightweight service that allows us to monitor all of our containers, we can see the status, logs and manage them directly there.
-It will require registration on the Portainer website to get a free license.
+We are going to use the official [Arcane](https://github.com/getarcaneapp/arcane) image, a beautiful, intuitive interface for managing your Docker containers, images, networks, and volumes. No terminal required, that allows us to monitor all of our containers, we can see the status, logs and manage them directly there.
 
-
-#### Portainer Docker Container
+#### Arcane Docker Container
 
 
-```sh
-docker volume create portainer_data
+```yaml
+  arcane:
+    image: ghcr.io/ofkm/arcane:latest
+    container_name: arcane
+    ports:
+      - '9010:3552'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - arcane-data:/app/data
+      - '${ROOT}/MediaCenter/config/arcane/projects:/app/data/projects'
+    environment:
+      - APP_URL=${APP_URL}
+      - PUID=${PUID}
+      - PUID=${PUID}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENVIRONMENT=${ENVIRONMENT}
+    restart: unless-stopped
 
-docker run -d -p 8000:8000 -p 9444:9443 -p 9000:9000 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ee:latest
+volumes:
+  arcane-data:
 ```
 
+Then run the container with `docker-compose up -d --remove-orphans`.
 
-### Portainer Configuration
+To follow container logs, run `docker-compose logs -f arcane`.
 
-
-The Web UI for Portainer will be available on port 9000. Load it up and you will be greeted with the admin creation page.
-Add an username and password and hit `Create User`
-
-![Portainer Admin Creation](img/PortainerConfiguration.png)
-
-On the next page click on `Don't have a license?` and request a free one and insert it here and click on submit.
-
-![Portainer Admin Creation](img/PortainerRegister.png)
-
-Here just click on `Get Started` and you will be redirected to the `Environments` page.
-Select your environment click on `Stack` and then on the `quick-arr-stack`.
-On this page, you can see all your containers for this stack and multiple options to manage them.
-
-![Portainer Admin Creation](img/PortainerConainers.png)
+### Arcane Configuration
 
 
-## Media Management Script
+The Web UI for Arcane will be available on port 9010. Load it up and you will be greeted with the login page.
 
-[arr-stack-manager](https://github.com/Rick45/arr-Stack-Manager), a small script that delete watched data after X days
+The default login values are:
+
+Username: `arcane`
+
+Password: `arcane-admin`
+
+![Arcane Login](img/arcanelogin.png)
+
+After Login the system will prompt you to change the PW.
+
+![Arcane PW Change](img/arcanechangePW.png)
+
+
+Then you have all the information of you system here.
+
+![Arcane main page](img/arcane_mainPage.png)
 
 ## Mobile Management
 
 [Lunsea](https://www.lunasea.app/), Open source manager
 
-[nzb360](http://nzb360.com), is more powerful than lunasea  with a free and paid version. 
+[nzb360](http://nzb360.com), is more powerful than lunasea with a free and paid version. 
 
-_Note_: This only work inside your home network.
+_Note_: These only work inside your home network or connected with the wireguard vpn when outised.
 
 
 ## Thanks
