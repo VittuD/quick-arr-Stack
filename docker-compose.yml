@@ -1,4 +1,3 @@
-version: '3.4'
 services:
   vpn:
     container_name: vpn
@@ -17,44 +16,42 @@ services:
     devices:
       - '/dev/net/tun:/dev/net/tun'
     ports:
-      - '8112:8112' #deluge web UI Port
-    command: '-f "" -r 192.168.68.0/24'
+      - '8080:8080' # qBittorrent Web UI port
+    command: '-f "" -r ${LAN_NETWORK}'
 
-  deluge:
-    container_name: deluge
-    image: 'lscr.io/linuxserver/deluge:latest'
+  qbittorrent:
+    container_name: qbittorrent
+    image: 'lscr.io/linuxserver/qbittorrent:latest'
     restart: unless-stopped
     environment:
       - 'PUID=${PUID}'
       - 'PGID=${PGID}'
       - 'TZ=${TZ}'
+      - 'WEBUI_PORT=8080'
     volumes:
-      - '${ROOT}/MediaCenter/config/deluge:/config'
+      - '${ROOT}/MediaCenter/config/qbittorrent:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
-    #ports:
-    #  - '8112:8112' #uncomment if you are not using the VPN
-    network_mode: 'service:vpn' #comment/remove if you are not using the VPN
-    depends_on:                 #comment/remove if you are not using the VPN
-      - vpn                     #comment/remove if you are not using the VPN
+    network_mode: 'service:vpn'
+    depends_on:
+      - vpn
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     environment:
-      - PUID=1000
-      - PGID=1000
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
       - 'TZ=${TZ}'
     volumes:
       - '${ROOT}/MediaCenter/config/prowlarr:/config'
     restart: unless-stopped
     ports:
-      - '9696:9696' #uncomment if you are not using the VPN
+      - '9696:9696'
 
   sonarr:
     container_name: sonarr
     image: 'lscr.io/linuxserver/sonarr:latest'
     restart: unless-stopped
-    network_mode: host
     environment:
       - 'PUID=${PUID}'
       - 'PGID=${PGID}'
@@ -63,11 +60,13 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
       - '${ROOT}/MediaCenter/config/sonarr:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
+    ports:
+      - '8989:8989'
+
   radarr:
     container_name: radarr
     image: 'lscr.io/linuxserver/radarr:latest'
     restart: unless-stopped
-    network_mode: host
     environment:
       - 'PUID=${PUID}'
       - 'PGID=${PGID}'
@@ -76,6 +75,23 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
       - '${ROOT}/MediaCenter/config/radarr:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
+    ports:
+      - '7878:7878'
+
+  lidarr:
+    container_name: lidarr
+    image: 'lscr.io/linuxserver/lidarr:latest'
+    restart: unless-stopped
+    environment:
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
+      - 'TZ=${TZ}'
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '${ROOT}/MediaCenter/config/lidarr:/config'
+      - '${HDDSTORAGE}:/MediaCenterBox'
+    ports:
+      - '8686:8686'
       
   bazarr:
     container_name: bazarr
@@ -93,17 +109,19 @@ services:
     ports:
       - '6767:6767'
       
-  plex-server:
-    container_name: plex-server
-    image: 'plexinc/pms-docker:latest'
+  jellyfin:
+    container_name: jellyfin
+    image: 'lscr.io/linuxserver/jellyfin:latest'
     restart: unless-stopped
     environment:
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
       - 'TZ=${TZ}'
-    network_mode: host
     volumes:
-      - '${ROOT}/MediaCenter/config/plex/db:/config'
-      - '${ROOT}/MediaCenter/config/plex/transcode:/transcode'
-      - '${HDDSTORAGE}/Completed:/MediaCenterBox'  
+      - '${ROOT}/MediaCenter/config/jellyfin:/config'
+      - '${HDDSTORAGE}/Completed:/MediaCenterBox'
+    ports:
+      - '8096:8096'
 
   flaresolverr:
     # DockerHub mirror flaresolverr/flaresolverr:latest
@@ -121,60 +139,30 @@ services:
 
 ### Optional Containers
 
-  wireguard:
-    image: ghcr.io/linuxserver/wireguard:latest
-    container_name: wireguard
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
     environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PUID} # default user id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
-      - SERVERURL=${SERVERURL} # server public ip, auto to auto find, defined in .env
-      - SERVERPORT=51820 #optional
-      - PEERS=${PEERS} # number of clients to be auto configured, defined in .env
-      - PEERDNS=auto #optional
-      - INTERNAL_SUBNET=172.168.69.0 #optional, network for devices ips. CAN NOT be the same as your home network
-      - ALLOWEDIPS=0.0.0.0/0 #optional
-    volumes:
-      - ${ROOT}/MediaCenter/config/wireguard:/config # config folder
-      - /lib/modules:/lib/modules
-    ports:
-      - 51820:51820/udp
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    restart: always
-  
-  overseerr:
-     image: ghcr.io/seerr-team/seerr:latest
-    container_name: overseerr
-    environment:
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=info
       - 'TZ=${TZ}'
     ports:
       - '5055:5055'
     volumes:
-      - '${ROOT}/MediaCenter/config/overseerr/config:/app/config'
-    restart: unless-stopped
-  
-  arcane:
-    image: ghcr.io/ofkm/arcane:latest
-    container_name: arcane
-    ports:
-      - '9010:3552'
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - arcane-data:/app/data
-      - '${ROOT}/MediaCenter/config/arcane/projects:/app/data/projects'
-    environment:
-      - APP_URL=${APP_URL}
-      - PUID=${PUID}
-      - PUID=${PUID}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - JWT_SECRET=${JWT_SECRET}
-      - ENVIRONMENT=${ENVIRONMENT}
+      - '${ROOT}/MediaCenter/config/seerr:/app/config'
     restart: unless-stopped
 
-volumes:
-  arcane-data:
+  musicseerr:
+    image: ghcr.io/habirabbu/musicseerr:latest
+    container_name: musicseerr
+    environment:
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
+      - 'PORT=8688'
+      - 'TZ=${TZ}'
+    ports:
+      - '8688:8688'
+    volumes:
+      - '${ROOT}/MediaCenter/config/musicseerr:/app/config'
+      - '${ROOT}/MediaCenter/config/musicseerr-cache:/app/cache'
+      - '${HDDSTORAGE}/Completed/Music:/music:ro'
+    restart: unless-stopped

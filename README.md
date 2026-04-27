@@ -1,955 +1,556 @@
 ## Quick Arr Stack
 
-TV shows and movies download, sorted, with the desired quality and subtitles, behind a VPN (optional), ready to watch, in a beautiful media player.
-All automated.
+Automated media stack for finding, downloading, organizing, subtitling, requesting, and watching movies and TV shows.
 
-This guide builds on the original configurations with additional information for PureVPN setup and includes a Wireguard Docker container to access the media center remotely without exposing the Plex port.
+This version is built around:
 
+- qBittorrent for torrent downloads
+- a VPN sidecar container for qBittorrent traffic
+- Prowlarr for indexers
+- Sonarr, Radarr, and Lidarr for automation
+- Bazarr for subtitles
+- Jellyfin for playback
+- Seerr for optional request management
+- MusicSeerr for optional music request management
 
-_Disclaimer: I'm not encouraging/supporting piracy, this is for information only._
+_Disclaimer: this repository is for educational and personal media-management use. Follow the laws and service terms that apply where you live._
 
 ## Table of Contents
 
-- [Quick Arr Stack](#quick-arr-stack)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Hardware configuration](#hardware-configuration)
-  - [Software stack](#software-stack)
-  - [Installation guide](#installation-guide)
-    - [Install docker and docker-compose](#install-docker-and-docker-compose)
-    - [Helpful Docker Commands](#helpful-docker-commands)
-    - [Clone the repository](#clone-the-repository)
-    - [Setup environment variables](#setup-environment-variables)
-    - [Folder Structure](#folder-structure)
-    - [Setup a VPN Container](#setup-a-vpn-container)
-      - [VPN Option](#vpn-option)
-      - [purevpn.com custom setup](#purevpncom-custom-setup)
-      - [Docker container](#vpn-docker-container)
-    - [Setup Deluge](#setup-deluge)
-      - [Docker container](#deluge-docker-container)
-      - [Configuration](#deluge-configuration)
-    - [Setup Plex](#setup-plex)
-      - [Docker Container](#media-server-docker-container)
-      - [Configuration](#plex-configuration)
-    - [Setup Sonarr](#setup-sonarr)
-      - [Docker container](#sonarr-docker-container)
-      - [Configuration](#sonarr-configuration)
-    - [Setup Radarr](#setup-radarr)
-      - [Docker container](#radarr-docker-container)
-      - [Configuration](#radarr-configuration)
-    - [Setup FlareSolverr](#setup-flaresolverr)
-      - [Docker container](#flaresolverr-docker-container)
-      - [Configuration in Prowlarr](#flaresolverr-configuration-in-prowlarr)
-    - [Setup Prowlarr](#setup-prowlarr)
-      - [Docker container](#prowlarr-docker-container)
-      - [Configuration](#prowlarr-configuration)
-    - [Setup Bazarr](#setup-bazarr)
-      - [Bazarr Docker container](#bazarr-docker-container)
-      - [Bazarr Configuration](#bazarr-configuration)
-    - [Testing](#testing)
-    - [Optional containers](#optional-containers)
-      - [Setup Wireguard](#setup-wireguard)
-        - [Docker container](#wireguard-docker-container)
-        - [Configuration and usage](#wireguard-configuration)
-      - [Setup Seerr](#seerr-setup)
-        - [Docker container](#seerr-docker-container)
-        - [Configuration and usage](#seerr-configuration)
-      - [Setup Arcane](#arcane-setup)
-        - [Docker container](#arcane-docker-container)
-        - [Configuration and usage](#arcane-configuration)
-  - [Mobile Management](#mobile-management)
-
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Environment](#environment)
+- [Folders](#folders)
+- [VPN Sidecar](#vpn-sidecar)
+- [qBittorrent](#qbittorrent)
+- [Jellyfin](#jellyfin)
+- [Sonarr](#sonarr)
+- [Radarr](#radarr)
+- [Lidarr](#lidarr)
+- [Prowlarr](#prowlarr)
+- [FlareSolverr](#flaresolverr)
+- [Bazarr](#bazarr)
+- [Seerr](#seerr)
+- [MusicSeerr](#musicseerr)
+- [Testing](#testing)
+- [Remote Access](#remote-access)
+- [Useful Commands](#useful-commands)
 
 ## Overview
 
-This is a quick guide on how to build a server with a [Servarr stack](https://wiki.servarr.com/)
+The stack uses a shared storage layout so every service sees the same paths. qBittorrent downloads into the shared media volume. Sonarr, Radarr, and Lidarr import completed downloads into organized library folders. Bazarr adds subtitles. Jellyfin scans the final library folders. Seerr and MusicSeerr provide request interfaces on top of Jellyfin and the matching automation apps.
 
-How does it work?
+Only qBittorrent is routed through the VPN sidecar. The other services stay on the normal Docker or host network so their web UIs and APIs remain easy to access from your LAN.
 
-This is composed of multiple tools working together to have an automated way to monitor and watch your favourite TV Shows and Movies
+## Architecture
 
-**Downloaders**:
-
-- [OpenVPN Client](https://github.com/dperson/openvpn-client) (optional but highly recommended): the container is used by Deluge to encapsulate the incoming/outgoing traffic.
-- [Deluge](http://deluge-torrent.org/) handles torrent download.
-- [Prowlarr](https://prowlarr.com/): is an indexer manager/proxy built on the popular *arr .net/reactjs base stack to integrate with your various PVR apps. Prowlarr supports the management of both Torrent Trackers and Usenet Indexers.
-- [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr): is a proxy server to bypass Cloudflare and other challenges for indexers that are protected by them.
-- [Bazarr](https://www.bazarr.media/) is a companion application to Sonarr and Radarr. It manages and downloads subtitles based on your requirements. You define your preferences by TV show or movie and Bazarr takes care of everything for you.
-
-**Download orchestration**:
-
-- [Sonarr](https://sonarr.tv): manage TV show, automatic downloads, sort & rename
-- [Radarr](https://radarr.video): basically the same as Sonarr, but for movies
-
-**Media Center**:
-
-- [Plex](https://plex.tv): media center server with streaming transcoding features, useful plugins and a beautiful UI. Clients available for many systems (Linux/OSX/Windows, Web, Android, Chromecast, Android TV, etc.)
-
-
-**Optional**:
-
-- [Seerr](https://seerr.dev/): is a free and open source software application for managing requests for your media library. It integrates with your existing services, such as Sonarr, Radarr, and Plex!
-
-- [Wireguard](https://github.com/linuxserver/docker-wireguard): is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. This will allow us to connect to our home network from anywhere and use the Plex app outside of our house without using Plex servers for routing.
-
-- [Arcane](https://github.com/getarcaneapp/arcane): A beautiful, intuitive interface for managing your Docker containers, images, networks, and volumes. No terminal required - monitor all containers, view status, logs and manage them directly.
-
-## Hardware configuration
-
-You can use an old Laptop with Debian, Raspberry Pi, a Synology NAS, or a Windows or Mac computer. The stack should work fine on all these systems, but you must adapt the Docker stack below to your OS. I'll only focus on a standard Linux installation here.
-
-Keep in mind that all the movies and shows are downloaded to your computer, so a Hard Drive with high capacity is recommended.
-
-## Software stack
-
-![Architecture Diagram](img/architecture_diagram.png)
-
-## Installation guide
-
-### Install docker and docker-compose
-
-See the [official instructions](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/#install-docker-ce-1) to install Docker.
-
-Then add yourself to the `docker` group:
-`sudo usermod -aG docker myuser`
-
-Make sure it works fine:
-`docker run hello-world`
-
-Also, install docker-compose (see the [official instructions](https://docs.docker.com/compose/install/#install-compose)).
-
-### Helpful Docker Commands
-
-```sh
-#Check the Status of all docker containers:
-docker container ls --format "{{.Names}} || state {{.State}} {{.Status}} || ID {{.ID}}"
-
-#Restart a specific container:
-docker-compose restart CONTAINER_NAME
-
-#To follow container logs:
-docker-compose logs -f CONTAINER_NAME
-
-#To update all containers:
-docker-compose stop
-docker-compose pull
-docker-compose start
-
+```text
+Prowlarr -> Sonarr/Radarr/Lidarr -> qBittorrent -> VPN sidecar -> Internet
+                                    |
+                                    v
+                           shared media storage
+                                    |
+                 Bazarr -> subtitles -> Jellyfin
+                                    ^
+                                    |
+                         Seerr / MusicSeerr
 ```
 
+![Architecture placeholder](img/placeholder-screenshot.svg)
 
-### Clone the repository
+_Screenshot placeholder: replace this after the qBittorrent, Jellyfin, and Seerr setup has been validated._
 
-This tutorial will guide you along the full process of making your own docker-compose file and configuring every app within it, however, to prevent errors or to reduce your typing, you can also use the general-purpose docker-compose file provided in this repository.
+## Prerequisites
 
-1. First, `git clone https://github.com/Rick45/quick-arr-Stack` into a directory. This is where you will run the full setup from (note: this isn't the same as your configuration or media directory)
-2. Rename the `.env.example` file included in the repo to `.env`.
-3. Continue this guide, and the docker-compose file snippets you see are already ready for you to use. You'll still need to manually configure your `.env` file and other manual configurations.
+- Docker
+- Docker Compose
+- A Linux host or NAS that can run Docker
+- A storage location large enough for downloads and final media
+- NordVPN manual OpenVPN service credentials
+- An away-to-home VPN or other private remote-access method if you want to access the stack outside your LAN
 
-### Setup environment variables
-
-Rename the `.env.example` file included in the repo to `.env`.
-
-Here is an example of what your `.env` file should look like, use values that fit your own setup.
+Install Docker using the official Docker documentation for your platform, then verify it works:
 
 ```sh
-# Your timezone, https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+docker run hello-world
+```
+
+## Environment
+
+Copy the example environment file:
+
+```sh
+cp .env.example .env
+```
+
+Edit `.env` for your machine:
+
+```sh
 TZ=Europe/Lisbon
-# UNIX PUID and PGID, find with: id $USER
 PUID=1000
 PGID=1000
-# The directory where configuration will be stored.
-ROOT=/home/{youruser}/  #update the {youruser} with your user path
-# The directory where data will be stored.
-HDDSTORAGE=/home/{youruser}/Storage/ #update the {youruser} with your user path
-
-# Wireguard Settings
-#Your public ip, auto for auto detect
-SERVERURL=auto
-#number of devices to generate configuration to connect to the wireguard vpn
-PEERS=7
-
-# Arcane
-#Application URL with the defined port
-APP_URL="http://localhost:9010"
-#Type of environment, this is our "live" environment so lets use production
-ENVIRONMENT=production
-#Random Encryption Key
-ENCRYPTION_KEY={your_encryption_key} #Run command: "openssl rand -base64 32" to generate a random key like dgx9U8oSegcUMb0mp3N/mMpYHB4ZYF+2m+ym6LYcCNg=
-#Random JWT Secret
-JWT_SECRET={your_jwt_secret} #Run command: "openssl rand -base64 32" to generate a random key like dgx9U8oSegcUMb0mp3N/mMpYHB4ZYF+2m+ym6LYcCNg=
+ROOT=/home/{youruser}
+HDDSTORAGE=/home/{youruser}/Storage
+LAN_NETWORK=192.168.1.0/24
 ```
 
-Things to notice:
+Find your user and group IDs with:
 
-- TZ is based on your [tz time zone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
-- The PUID and PGID are your user's ids. Find them with `id $USER`.
-- This file should be in the same directory as your `docker-compose.yml` file so the values can be read in.
-
-
-***
-
-
-
-#### Folder Structure
-
-Currently, I'm doing this in this way as it is(from what I found) the most straightforward method to have the [Hard link](https://en.wikipedia.org/wiki/Hard_link) for files to work without issues, this halves the amount of size while the torrent is seeding, and solve some access issues that I found while doing this setup.
-
-
-Inside the folder from where you cloned the repository run the following command:  `docker-compose up -d --remove-orphans`.
-
-Then run the following ones:
-
-`sudo chown -R $USER:$USER /path/to/ROOT/directory` 
- 
-and 
- 
-`sudo chown -R $USER:$USER /path/to/HDDSTORAGE/directory` 
- 
-This will allow you to create folders, copy and paste files, this could be also required for Sonarr and Radarr to do some operations.
-
-After this Create 2 folders in the `Storage\Completed` folder, `Movies` and `TV`, this will be used later.
-
-
-![Folder Structure](img/folderStructure.png)
-
-
-
-
-### Setup a VPN Container
-
-#### VPN Option
-
-If you do not own a VPN you can bypass this step.
-  - It is required to comment the highlighted lines in the `docker-compose.yml`
- example:
- ```sh
-    #ports:
-    #  - '8112:8112' #uncomment if you are not using the VPN
-    network_mode: 'service:vpn' #comment/remove if you are not using the VPN
-    depends_on:                 #comment/remove if you are not using the VPN
-      - vpn                     #comment/remove if you are not using the VPN
+```sh
+id $USER
 ```
 
-The goal here is to have an OpenVPN Client container running and always connected. We'll make Deluge incoming and outgoing traffic go through this OpenVPN container.
+Set `LAN_NETWORK` to your home subnet, for example `192.168.1.0/24` or `192.168.68.0/24`. The VPN sidecar uses this to keep local web UI access working while qBittorrent traffic is routed through the VPN tunnel.
 
-This must come up with some safety features:
+NordVPN credentials are not stored in `.env`. Put the OpenVPN config and auth file under:
 
-Configuration is explained on the [project page](https://github.com/dperson/openvpn-client), you can follow it.
-However, it is not that easy depending on your VPN server settings.
-I'm using a purevpn.com VPN, so here is how I set it up.
+```text
+${ROOT}/MediaCenter/config/vpn
+```
 
+## Folders
 
-#### purevpn.com custom setup
+Use one shared media root so qBittorrent, Sonarr, Radarr, Lidarr, Bazarr, and Jellyfin all agree on paths.
 
-_Note_: this section only applies for [PureVPN](purevpn.com) accounts.
+Expected storage layout:
 
-1. Delete all content in `${ROOT}/config/vpn` and replace it with the ones available in the repo folder `Config Files\config\vpn(PureVPN)`
-1. Download the openVPN file from [PureVPN website](https://support.purevpn.com/openvpn-files).
-1. Open the file in the udp folder related to the country/connection that you want to use.
-1. Copy the remote value in the file and replace it on the vpn.conf file that now is in `${ROOT}/config/vpn`
+```text
+${HDDSTORAGE}/
+  Downloads/
+    movies/
+    tv/
+    music/
+  Completed/
+    Movies/
+    TV/
+    Music/
+```
 
+Create the shared download and final media folders:
 
-#### VPN Docker container
+```sh
+mkdir -p \
+  "${HDDSTORAGE}/Downloads/movies" \
+  "${HDDSTORAGE}/Downloads/tv" \
+  "${HDDSTORAGE}/Downloads/music" \
+  "${HDDSTORAGE}/Completed/Movies" \
+  "${HDDSTORAGE}/Completed/TV" \
+  "${HDDSTORAGE}/Completed/Music"
+```
 
-Your docker-compose file should have something like this:
+If permissions are wrong, fix ownership for your config and storage roots:
+
+```sh
+sudo chown -R "$USER:$USER" /path/to/root-directory
+sudo chown -R "$USER:$USER" /path/to/storage-directory
+```
+
+## VPN Sidecar
+
+The `vpn` service runs an OpenVPN client. qBittorrent uses:
 
 ```yaml
-
-  vpn:
-    container_name: vpn
-    image: 'dperson/openvpn-client:latest'
-    environment:
-      - 'OTHER_ARGS= --mute-replay-warnings'
-    cap_add:
-      - net_admin
-    restart: unless-stopped
-    volumes:
-      - '${ROOT}/MediaCenter/config/vpn:/vpn'
-    security_opt:
-      - 'label:disable'
-    devices:
-      - '/dev/net/tun:/dev/net/tun'
-    ports:
-      - '8112:8112' #deluge web UI Port
-    command: '-f "" -r 192.168.68.0/24'
-
+network_mode: service:vpn
 ```
 
-Then run the container with `docker-compose up -d --remove-orphans`.
+That means qBittorrent shares the VPN container network stack. qBittorrent traffic exits through the VPN tunnel, while services like Jellyfin, Sonarr, Radarr, Bazarr, Prowlarr, and Seerr stay reachable on the normal LAN paths.
 
-To follow container logs, run `docker-compose logs -f vpn`.
+NordVPN manual OpenVPN setup:
 
-Every time you make changes in the VPN config file run `docker-compose restart vpn` to force the container to restart and load the new settings
+1. Log in to your Nord Account.
+2. Open the NordVPN manual setup area.
+3. Download a recommended OpenVPN UDP configuration file.
+4. Get the NordVPN service credentials for manual connections.
+5. Put the `.ovpn` file in `${ROOT}/MediaCenter/config/vpn`.
+6. Put the service username and password in an auth file in the same folder.
+7. Make sure the `.ovpn` file references that auth file with a container path, for example `auth-user-pass /vpn/vpn.auth`.
 
-***
+Start or restart the VPN service after changing files:
 
+```sh
+docker compose up -d vpn
+docker compose logs -f vpn
+```
 
-### Setup Deluge
-
-
-
-#### Deluge Docker container
-
-_Note_: (Not Advised) If you don't own a VPN and want to use this without VPN  use the following compose, this WILL EXPOSE your real IP address.
+The qBittorrent Web UI port is published through the VPN container:
 
 ```yaml
-
-deluge:
-    container_name: deluge
-    image: 'linuxserver/deluge:latest'
-    restart: unless-stopped
-    environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PGID} # default group id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
-    volumes:
-      - '${ROOT}/MediaCenter/config/deluge:/config'  # config files
-      - '${HDDSTORAGE}:/MediaCenterBox'  # downloads folder
-    network_mode: 'service:vpn' #comment/remove if you are not using the VPN
-    depends_on:                 #comment/remove if you are not using the VPN
-      - vpn                     # run on the vpn network #comment/remove if you are not using the VPN
-
+vpn:
+  ports:
+    - "8080:8080"
 ```
 
+## qBittorrent
 
-#### Deluge Configuration
+qBittorrent is the torrent client. It is intentionally attached to the VPN sidecar.
 
-_Note_: If the below page does not open and you are using the VPN normally it means that something is wrong with the VPN itself!
-
-Run `docker-compose restart deluge` every time you stop or start the VPN container as Deluge depends on it.
-
-
-You should be able to log in on the web UI (`localhost:8112`, replace `localhost` with your machine ip if needed).
-
-![Deluge Login](img/DelugeLogin.png)
-
-
-The default password is `deluge`. You are asked to modify it.
-
-The running deluge daemon should be automatically detected and appear online, you can connect to it.
-
-![Deluge daemon](img/DelugeDaemon.png)
-
-You should activate `autoadd` in the plugins section: it adds support for `.magnet` files.
-
-![Deluge paths](img/DelugePaths.png)
-
-
-You should activate `Label` in the plugins section: it adds support for labels in Sonarr and Radarr
-
-![Deluge Plugins](img/DelugeLabelPlugin.png)
-
-
-
-Configuration gets stored automatically in your mounted volume (`${ROOT}/config/deluge`) to be re-used at container restart. Important files in there:
-
-- `auth` contains your login/password
-- `core.conf` contains your deluge configuration
-
-You can use the Web UI manually to download any torrent from a .torrent file or magnet hash.
-
-
-Notice how Deluge is now using the VPN container network, with Deluge web UI and Prowlarr port exposed on the vpn container for local network access.
-
-You can check that deluge is properly going out through the VPN IP by using [torguard check](https://torguard.net/checkmytorrentipaddress.php).
-Get the torrent magnet link there, put it in Deluge, and wait a bit, and then you should see your outgoing torrent IP on the website.
-
-![Torrent guard](img/torrent_guard.png)
-
-
-***
-
-### Setup Plex
-
-#### Media Server Docker Container
-
-Plex team already provides a maintained [Docker image for pms](https://github.com/plexinc/pms-docker).
-
-We'll use the host network directly, and run our container with the following configuration:
+Compose service:
 
 ```yaml
-plex-server:
-    container_name: plex-server
-    image: 'plexinc/pms-docker:latest'
-    restart: unless-stopped
-    environment:
-      - 'TZ=${TZ}'
-    network_mode: host
-    volumes:
-      - '${ROOT}/MediaCenter/config/plex/db:/config' #plex configs
-      - '${ROOT}/MediaCenter/config/plex/transcode:/transcode' # temp transcoded files
-      - '${HDDSTORAGE}/Completed:/HDD_Completed' #Media location TV Shows/Movies
+qbittorrent:
+  container_name: qbittorrent
+  image: lscr.io/linuxserver/qbittorrent:latest
+  restart: unless-stopped
+  environment:
+    - PUID=${PUID}
+    - PGID=${PGID}
+    - TZ=${TZ}
+    - WEBUI_PORT=8080
+  volumes:
+    - ${ROOT}/MediaCenter/config/qbittorrent:/config
+    - ${HDDSTORAGE}:/MediaCenterBox
+  network_mode: service:vpn
+  depends_on:
+    - vpn
 ```
 
-Then run the container with `docker-compose up -d --remove-orphans`.
+Start it with the VPN:
 
-To follow container logs, run `docker-compose logs -f plex-server`.
+```sh
+docker compose up -d vpn qbittorrent
+```
 
-#### Plex Configuration
+Open the Web UI:
 
-Plex Web UI should be available at `localhost:32400/web` (replace `localhost` by your server ip if needed).
-You'll have to log in first (registration is free), and then Plex will ask you to add your libraries.
-I have two libraries:
+```text
+http://localhost:8080
+```
 
-- Movies
-- TV shows
+The LinuxServer qBittorrent image prints the temporary `admin` password in the container logs on first startup. Change the Web UI username and password after logging in.
 
-Add these the library paths:
+```sh
+docker compose logs qbittorrent
+```
+
+Recommended qBittorrent settings:
+
+- Set completed downloads to a path under `/MediaCenterBox/Downloads`.
+- Use categories for `movies`, `tv`, and `music` if you want cleaner Sonarr, Radarr, and Lidarr routing.
+- Do not configure SOCKS5 for the first pass; verify the VPN-only path first.
+
+![qBittorrent placeholder](img/placeholder-screenshot.svg)
+
+_Screenshot placeholder: replace this with the qBittorrent Web UI and settings after validation._
+
+## Jellyfin
+
+Jellyfin is the media server. It reads the final imported folders and does not need to run behind the VPN sidecar.
+
+Open the Web UI:
+
+```text
+http://localhost:8096
+```
+
+Add libraries:
 
 - Movies: `/MediaCenterBox/Movies`
-- TV: `/MediaCenterBox/TV`
+- TV Shows: `/MediaCenterBox/TV`
+- Music: `/MediaCenterBox/Music`
 
-Example:
+Those paths correspond to the host folders:
 
-
-![Set TV Ligbrary](img/PlexSetTV.png)
-
-
-As you'll see later, these library directories will each have files automatically placed into them with Radarr (movies) and Sonarr (tv), respectively.
-
-Now, Plex will then scan your files and gather extra content; it may take some time according to how large your directory is.
-
-A few things I like to configure in the settings:
-
-- Tick "Update my library automatically"
-
-You can already watch your stuff through the Web UI. 
-
-***
-
-
-
-### Setup Sonarr
-
-#### Sonarr Docker container
-
-The docker file should look like this:
-
-```yaml
-  sonarr:
-    container_name: sonarr
-    image: 'linuxserver/sonarr:latest'
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - 'PUID=${PUID}'
-      - 'PGID=${PGID}'
-      - 'TZ=${TZ}'
-    volumes:
-      - '/etc/localtime:/etc/localtime:ro'
-      - '${ROOT}/MediaCenter/config/sonarr:/config' #config Folder
-      - '${HDDSTORAGE}:/MediaCenterBox' #data Folder
+```text
+${HDDSTORAGE}/Completed/Movies
+${HDDSTORAGE}/Completed/TV
+${HDDSTORAGE}/Completed/Music
 ```
 
-Then run the container with `docker-compose up -d --remove-orphans`.
+![Jellyfin placeholder](img/placeholder-screenshot.svg)
 
-To follow container logs, run `docker-compose logs -f sonarr`.
+_Screenshot placeholder: replace this with the Jellyfin library setup after validation._
 
-Sonarr web UI listens on port 8989 by default. You need to mount your tv shows directory (the one where everything will be nicely sorted and named). And your download folder, because Sonarr will look over there for completed downloads, then move them to the appropriate directory.
+## Sonarr
 
-#### Sonarr Configuration
+Sonarr manages TV shows.
 
-Sonarr should be available on `localhost:8989`. Go straight to the `Settings` tab.
+Open the Web UI:
 
-
-Sonarr should be ready out of the box, there are multiple settings and configurations that you can explore later but we are going to start with the basics.
-
-`Root Folders` is in the Media Management tab, here we add the `/MediaCenterBox/Completed/TV/` folder. This will be the default directory where all the TV Shows will be stored
-
-![Sonarr Root Folders](img/SonarRootFolders.png)
-
-`Download Clients` tab is where we'll configure links with our download client Deluge.
-There are existing presets for these that we'll fill with the proper configuration.
-
-Deluge configuration:
-
-![Sonarr Deluge configuration](img/SonarrDelugeConfig.png)
-
-Enable `Advanced Settings`, and tick `Remove Completed` in the Completed Download Handling section. This tells Sonarr to remove torrents from Deluge once processed.
-
-
-`Indexers` is the important tab: that's where Sonarr will grab information about released episodes. This will be automatically configurated by [Prowlarr](#setup-prowlarr)
-
-
-In `Connect` tab, we'll configure Sonarr to send notifications to Plex when a new episode is ready:
-
-![Sonarr Plex configuration](img/SonarrPlexConnect.png)
-
-
-
-### Setup Radarr
-
-Radarr is a fork of Sonarr, made for movies instead of TV shows. For a good while I've used CouchPotato for that exact purpose, but have not been really happy with the results. Radarr intends to be as good as Sonarr!
-
-#### Radarr Docker container
-
-Radarr is very similar to Sonarr.
-
-```yaml
-
-  radarr:
-    container_name: radarr
-    image: 'linuxserver/radarr:latest'
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PGID} # default group id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
-     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${ROOT}/config/radarr:/config # config files
-      - ${ROOT}/complete/movies:/movies # movies folder
-      - ${ROOT}/downloads:/downloads # download folder
+```text
+http://localhost:8989
 ```
 
+Set the root folder:
 
-Then run the container with `docker-compose up -d --remove-orphans`.
-
-To follow container logs, run `docker-compose logs -f radarr`.
-
-#### Radarr Configuration
-
-Radarr should be available on `localhost:7878`. Go straight to the `Settings` tab.
-
-Radarr should be ready out of the box, there are multiple settings and configurations that you can explore later but we are going to start with the basics.
-
-`Root Folders` is in the Media Management tab, here we add the `/MediaCenterBox/Completed/Movies/` folder. This will be the default directory where all the TV Shows will be stored
-
-![Radarr Root Folders](img/RadarrRootFolder.png)
-
-`Download Clients` tab is where we'll configure links with our download client Deluge.
-There are existing presets for these 2 that we'll fill with the proper configuration.
-
-Deluge configuration:
-
-![Radarr Deluge configuration](img/RadarrDelugeConfig.png)
-
-Enable `Advanced Settings`, and tick `Remove Completed` in the Completed Download Handling section. This tells Sonarr to remove torrents from Deluge once processed.
-
-
-`Indexers` is the important tab: that's where Radarr will grab information about released episodes. This will be automatically configurated by [Prowlarr](#setup-prowlarr)
-
-
-In `Connect` tab, we'll configure Sonarr to send notifications to Plex when a new episode is ready:
-
-![Sonarr Plex configuration](img/RadarrPlexConnect.png)
-
-
-
-***
-### Setup FlareSolverr
-
-[FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) is a proxy server to bypass Cloudflare protection. Many torrent indexers are behind Cloudflare, and Prowlarr needs FlareSolverr to be able to search on them.
-
-#### FlareSolverr Docker container
-
-```yaml
-  flaresolverr:
-    # DockerHub mirror flaresolverr/flaresolverr:latest
-    image: ghcr.io/flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
-    environment:
-      - 'LOG_LEVEL=info'
-      - 'LOG_HTML=false'
-      - 'CAPTCHA_SOLVER=none'
-      - 'TZ=${TZ}'
-    ports:
-      - '8191:8191'
-    restart: unless-stopped
+```text
+/MediaCenterBox/Completed/TV
 ```
 
-Then run the container with `docker-compose up -d --remove-orphans`.
+Add qBittorrent as the download client:
 
-To follow container logs, run `docker-compose logs -f flaresolverr`.
+- Host: `vpn`
+- Port: `8080`
+- Username/password: the qBittorrent Web UI credentials
+- Category: `tv`
 
-#### FlareSolverr Configuration in Prowlarr
+Enable completed download handling so Sonarr imports completed episodes into the TV library folder.
 
-Once FlareSolverr is running, you need to configure Prowlarr to use it.
+![Sonarr qBittorrent placeholder](img/placeholder-screenshot.svg)
 
-1.  In the Prowlarr web UI, go to `Settings` -> `Indexers`.
-2.  Under the `Indexer Proxies` section, click the `+` to add a new proxy.
-3.  Fill in the details for FlareSolverr:
-    -   **Name**: `FlareSolverr`
-    -   **Tags**: `FlareSolverr`
-    -   **Host**: `http://YOUR.IP.ADDRESS:8191`
-    -   **Request Timeout**: `60`
-4.  Click `Test` to verify the connection.
-5.  Click `Save`.
+_Screenshot placeholder: replace this with Sonarr qBittorrent download-client settings after validation._
 
-Now, when you add an indexer in Prowlarr that requires FlareSolverr, you can select it by selecting the tag FlareSolverr in the tags section.
+## Radarr
 
+Radarr manages movies.
 
-***
-### Setup Prowlarr
+Open the Web UI:
 
-[Prowlarr](https://prowlarr.com/) translates requests from Sonarr and Radarr to searches for torrents on popular torrent websites.
-
-#### Prowlarr Docker container
-
-
-```yaml
-prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
-    container_name: prowlarr
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - 'TZ=${TZ}'
-    volumes:
-      - '${ROOT}/MediaCenter/config/prowlarr:/config'
-    restart: unless-stopped
-    #ports:
-    #  - '9696:9696' #uncomment if you are not using the VPN
-    network_mode: 'service:vpn' #comment/remove if you are not using the VPN
-    depends_on:                 #comment/remove if you are not using the VPN
-      - vpn                     #comment/remove if you are not using the VPN
-
+```text
+http://localhost:7878
 ```
 
-Nothing particular in this configuration, it's pretty similar to other linuxserver.io images.
+Set the root folder:
 
-Then run the container with `docker-compose up -d --remove-orphans`.
-
-To follow container logs, run `docker-compose logs -f prowlarr`.
-
-#### Prowlarr Configuration
-
-Prowlarr web UI is available on port 9696(`localhost:9696`, replace `localhost` by your machine ip if needed).
-
-
-On login, it will request to set up a login method. Any option works; as an example, I have used the forms option
-
-![Prowlarr login setup](img/prowlarrLogin.png)
-
-
-Click on `Add Indexer` and add any torrent indexer that you like. I added 1337x as an example.
-
-![Prowlarr add indexer](img/prowlarrAddIndexer.png)
-
-
-Click on `Apps` and add the Sonarr and Radarr App, this will require an API key that you can get in the Radarr and Sonarr apps in the `Settings - General` and then `Security`
-
-
-![Prowlarr add Radarr App](img/RadarrAPIKey.png)
-
-![Prowlarr add Sonarr App](img/prowlarrAddRadarr.png)
-
-
-Do the Same for the Sonarr app and click on the `Sync App Indexers` button 
-
-
-Now on Sonar and Radarr in the Settings - Indexers Tab it will show the indexer added in Prowlarr
-
-![Sonarr Indexers](img/SonarrIndexers.png)
-
-
-***
-
-### Setup Bazarr
-
-[Bazarr](https://www.bazarr.media/) hooks directly into Radarr and Sonarr and makes the process more effective and painless. If you don't care about subtitles go ahead and skip this step.
-
-#### Bazarr Docker container
-
-The docker file should look like this:
-
-```yaml
-  bazarr:
-    container_name: bazarr
-    image: 'linuxserver/bazarr:latest'
-    restart: unless-stopped
-    #network_mode: host
-    environment:
-      - 'PUID=${PUID}'
-      - 'PGID=${PGID}'
-      - 'TZ=${TZ}'
-      - UMASK_SET=022
-    volumes:
-      - '${ROOT}/MediaCenter/config/bazarr:/config' # config files
-      - '${HDDSTORAGE}:/MediaCenterBox' # Media folder
-    ports:
-      - '6767:6767'
-  
+```text
+/MediaCenterBox/Completed/Movies
 ```
 
+Add qBittorrent as the download client:
 
-Nothing particular in this configuration, it's pretty similar to other linuxserver.io images.
+- Host: `vpn`
+- Port: `8080`
+- Username/password: the qBittorrent Web UI credentials
+- Category: `movies`
 
-Then run the container with `docker-compose up -d --remove-orphans`.
+Enable completed download handling so Radarr imports completed movies into the Movies library folder.
 
-To follow container logs, run `docker-compose logs -f bazarr`.
+![Radarr qBittorrent placeholder](img/placeholder-screenshot.svg)
 
+_Screenshot placeholder: replace this with Radarr qBittorrent download-client settings after validation._
 
-#### Bazarr Configuration
+## Lidarr
 
-The Web UI for Bazarr will be available on port 6767. Load it up and you will be greeted with this setup page:
+Lidarr manages music.
 
-You can skip this page and go to the `Languages` tab. Here is an example I'm setting 2 languages to be fetch, English and Portuguese
+Open the Web UI:
 
-![Bazarr Languages](img/bazarrLanguage.png)
-
-Now we are going to create a profile that will define the type of subtitles that we want.
-
-![Bazarr Languages Profile](img/bazarrLanguageProfile.png)
-
-At last, we are going to set this profile as default for Movies and TV shows at the bottom of the page.
-
-![Bazarr Languages Profile](img/bazarrLanguageDefault.png)
-
-Hit Save on the top of the page and move to the next step.
-
-
-Now go to the `Providers` tab. Here you can add all the providers that you choose from the provided list. For now I will use [Open Subtitles](https://www.opensubtitles.org/). If you don't have an account head on over to the [Registration page](https://www.opensubtitles.org/en/newuser) and make a new account. 
-
-![Bazarr Open Subtitles](img/bazarrProviderSetup.png)
-
-Hit Save on the top of the page and move to the next step.
-
-Now we are going to enable the Sonarr and Radarr integrations. Go to the Sonarr tab and hit the enabled toggle.
-Here we need to change the address to the `IP` otherwise Bazarr will not detect it. Change the IP address to your machine's IP (in my example it's `192.168.0.144`), and set the Sonarr API key as we have done during the [Prowlarr configuration](#prowlarr-configuration), then hit test.
-
-
-![Bazarr Sonarr Configuration](img/bazarrSonarrConfiguration.png)
-
-Hit Save on the top of the page and move to the Radarr Tab, do the same steps as above but using the Radarr API key, then hit Save on the top of the page and move to the next step.
-
-After these steps you should see two new tabs, `Series` and `Movies`, this will be here where all the movies and tv shows are listed and the subtitles status of them. 
-
-![Bazarr Finished Setup](img/bazarrFinishedSetup.png)
-
-After this, all the required configurations are done and everything should work.
-
-
-
-#### Testing
-
-Go to Radarr to the `Movies` tab and click on `Add New`, search for a Movie. I'm going to use `The Last Man on Earth (1964)` as it is a Public Domain Movie.
-This will automatically fill in all the required information. You can adapt these parameters as you see fit. Make sure that you define a `Monitor` type so the movie is automatically downloaded
-
-![Adding The Last Man on Earth (1964) ](img/testingRadarr.png)
-
-Now if you click on `Movies` tab the added movie will display with a colour showing the current status of it, and some seconds after it should automatically start to download.
-![Added The Last Man on Earth (1964)](img/testingRadarrMovieAdded.png)
-
-Is also possible to manually search and many other options but that is beyond the scope of this guide.
-
-
-![Download in progress deluge](img/testingDownload.png)
-
-
-When the download is over, you can head over to Plex and check if the movie appeared correctly, with all metadata and subtitles grabbed automatically. 
-
-
-
-![Episode landed in Plex](img/testingPlexMovie.png)
-
-
-
-
-
-
-#### Optional containers
-
-The following containers are nice to have and are not required for the "mediaBox experience", they can be removed from the docker composed without any impact for all the system.
-
-
-
-### Setup Wireguard
-We'll use Wireguard Docker image from linuxserver [Docker image from linuxserver](https://hub.docker.com/r/linuxserver/wireguard )
-This container will allow you to connect to all your services outside your home network exposing only one port
-
-
-_Note_: It's required to open port 51820 in your router to be able to connect with the VPN to your home network.
-
-The following website has some example of how to port forward for most of routers: [portforward.com](https://portforward.com/router.htm)
-
-
-#### Wireguard Docker container
-
-```yaml
-wireguard:
-  image: ghcr.io/linuxserver/wireguard:latest
-  container_name: wireguard
-  cap_add:
-    - NET_ADMIN
-    - SYS_MODULE
-  environment:
-    - PUID=${PUID} # default user id, defined in .env
-    - PGID=${PUID} # default user id, defined in .env
-    - TZ=${TZ} # timezone, defined in .env
-    - SERVERURL=${SERVERURL} # server public ip, auto to auto find, defined in .env
-    - SERVERPORT=51820 #optional
-    - PEERS=${PEERS} # number of clients to be auto configured, defined in .env
-    - PEERDNS=auto #optional
-    - INTERNAL_SUBNET=172.168.69.0 #optional, network for devices ips. CAN NOT be the same as your home network
-    - ALLOWEDIPS=0.0.0.0/0 #optional
-  volumes:
-    - ${ROOT}/MediaCenter/config/wireguard:/config # config folder
-    - /lib/modules:/lib/modules
-  ports:
-    - 51820:51820/udp
-  sysctls:
-    - net.ipv4.conf.all.src_valid_mark=1
-  restart: always
-
-
+```text
+http://localhost:8686
 ```
 
-Nothing particular in this configuration, it's pretty similar to other linuxserver.io images.
+Set the root folder:
 
-Then run the container with `docker-compose up -d --remove-orphans`.
-
-To follow container logs, run `docker-compose logs -f wireguard`.
-
-
-#### Wireguard Configuration
-
-
-
-All the user's credentials will be created inside the config folder for wireguard ${ROOT}/MediaCenter/config/wireguard/peerX where peerX will be peer1, 2, 3,...
-
-
-***
-
-
-## Seerr Setup
-
-We'll use Seerr [official Docker image](https://github.com/seerr-team/seerr/pkgs/container/seerr)
-Seerr is a request management and media discovery tool built to work with your existing Plex ecosystem.
-Seerr helps you find media you want to watch. With inline recommendations and suggestions.
-
-It will allow you to request Movies and TV Shows without the need to go to Radarr or Sonarr, this is really helpful when there are other users in the system that we do not want to give access to Sonarr or Radarr for them to request movies or tv shows.
-
-### Seerr Docker Container
-
-
-```yaml
-  
-  seerr:
-    image: ghcr.io/seerr-team/seerr:latest
-    init: true
-    container_name: seerr
-    environment:
-      - LOG_LEVEL=debug
-      - TZ=Asia/Tashkent
-      - PORT=5055 #optional
-    ports:
-      - 5055:5055
-    volumes:
-      - '${ROOT}/MediaCenter/config/seerr/config:/app/config'
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
-      start_period: 20s
-      timeout: 3s
-      interval: 15s
-      retries: 3
-    restart: unless-stopped
+```text
+/MediaCenterBox/Completed/Music
 ```
 
+Add qBittorrent as the download client:
 
-Then run the container with `docker-compose up -d --remove-orphans`.
+- Host: `vpn`
+- Port: `8080`
+- Username/password: the qBittorrent Web UI credentials
+- Category: `music`
 
-To follow container logs, run `docker-compose logs -f seerr`.
+Add music-capable indexers through Prowlarr and let Prowlarr sync them into Lidarr.
 
+![Lidarr placeholder](img/placeholder-screenshot.svg)
 
-#### Seerr Configuration
+_Screenshot placeholder: replace this with Lidarr download-client and root-folder settings after validation._
 
-The Web UI for Seerr will be available on port 5055. Load it up and you will be greeted with this setup page:
+## Prowlarr
 
-![Seerr start page](img/seerr_startpage.png)
+Prowlarr manages torrent indexers and syncs them to Sonarr, Radarr, and Lidarr.
 
-You will need to log in with your Plex account.
+Open the Web UI:
 
-In the following screen fill the requested information
-
-Server: Manual Configuration
-Hostname or IP Address: your Plex Docker container IP
-Port: your Plex Docker container port
-
-Select the Libraries that you want to scan and hit Start Scan
-
-![Seerr configuration](img/seerr_plex_setup.png)
-
-
-Radarr and Sonarr Setup
-in the following screen configure the both Radarr and Sonarr
-
-![Seerr radar and sonar configuration](img/seerr_sonarr_setup.png)
-
-for each, we need to define it as the default server set the IP address (the port should be the default one) and the API Key, then click on test.
-after that fill the remaining settings with your desired configuration.
-
-
-![Seerr radar sample configuration](img/seerr_radarr_setup.png)
-
-#### Arcane Setup
-
-We are going to use the official [Arcane](https://github.com/getarcaneapp/arcane) image, a beautiful, intuitive interface for managing your Docker containers, images, networks, and volumes. No terminal required, that allows us to monitor all of our containers, we can see the status, logs and manage them directly there.
-
-#### Arcane Docker Container
-
-
-```yaml
-  arcane:
-    image: ghcr.io/ofkm/arcane:latest
-    container_name: arcane
-    ports:
-      - '9010:3552'
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - arcane-data:/app/data
-      - '${ROOT}/MediaCenter/config/arcane/projects:/app/data/projects'
-    environment:
-      - APP_URL=${APP_URL}
-      - PUID=${PUID}
-      - PUID=${PUID}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - JWT_SECRET=${JWT_SECRET}
-      - ENVIRONMENT=${ENVIRONMENT}
-    restart: unless-stopped
-
-volumes:
-  arcane-data:
+```text
+http://localhost:9696
 ```
 
-Then run the container with `docker-compose up -d --remove-orphans`.
+Add indexers in Prowlarr, then add Sonarr, Radarr, and Lidarr as apps. You will need each app API key from its `Settings` -> `General` area.
 
-To follow container logs, run `docker-compose logs -f arcane`.
+Prowlarr does not need to run behind the VPN sidecar in this stack. It only needs to reach indexers and the Sonarr/Radarr APIs.
 
-### Arcane Configuration
+![Prowlarr placeholder](img/placeholder-screenshot.svg)
 
+_Screenshot placeholder: replace this with Prowlarr app/indexer settings after validation._
 
-The Web UI for Arcane will be available on port 9010. Load it up and you will be greeted with the login page.
+## FlareSolverr
 
-The default login values are:
+FlareSolverr is optional. Keep it if your chosen indexers need Cloudflare challenge handling.
 
-Username: `arcane`
+Open service port:
 
-Password: `arcane-admin`
+```text
+http://localhost:8191
+```
 
-![Arcane Login](img/arcanelogin.png)
+Configure it in Prowlarr under indexer proxy settings when needed:
 
-After Login the system will prompt you to change the PW.
+- Name: `FlareSolverr`
+- Host: `http://flaresolverr:8191`
+- Request timeout: `60`
 
-![Arcane PW Change](img/arcanechangePW.png)
+## Bazarr
 
+Bazarr manages subtitles for Sonarr and Radarr media.
 
-Then you have all the information of you system here.
+Open the Web UI:
 
-![Arcane main page](img/arcane_mainPage.png)
+```text
+http://localhost:6767
+```
 
-## Mobile Management
+Configure:
 
-[Lunsea](https://www.lunasea.app/), Open source manager
+- Preferred subtitle languages
+- Subtitle providers
+- Sonarr integration with the Sonarr API key
+- Radarr integration with the Radarr API key
 
-[nzb360](http://nzb360.com), is more powerful than lunasea with a free and paid version. 
+Bazarr uses the same media mount as Sonarr and Radarr:
 
-_Note_: These only work inside your home network or connected with the wireguard vpn when outised.
+```text
+/MediaCenterBox
+```
 
+![Bazarr placeholder](img/placeholder-screenshot.svg)
+
+_Screenshot placeholder: replace this with Bazarr integration settings after validation._
+
+## Seerr
+
+Seerr is optional request and discovery management for Jellyfin, Sonarr, and Radarr.
+
+Open the Web UI:
+
+```text
+http://localhost:5055
+```
+
+Configure:
+
+- Jellyfin as the media server
+- Sonarr as the TV request target
+- Radarr as the movie request target
+- Default quality profiles and root folders
+- API keys for Sonarr and Radarr
+
+![Seerr placeholder](img/placeholder-screenshot.svg)
+
+_Screenshot placeholder: replace this with Seerr Jellyfin/Sonarr/Radarr setup after validation._
+
+## MusicSeerr
+
+MusicSeerr is optional request and discovery management for Jellyfin and Lidarr.
+
+Open the Web UI:
+
+```text
+http://localhost:8688
+```
+
+Configure:
+
+- Lidarr as the music request target
+- Jellyfin if you want media-server integration
+- Default quality profiles and root folder through Lidarr
+
+MusicSeerr depends on MusicBrainz coverage for best results. Missing Spotify releases may need manual MusicBrainz imports before they become easy to request.
+
+![MusicSeerr placeholder](img/placeholder-screenshot.svg)
+
+_Screenshot placeholder: replace this with MusicSeerr setup after validation._
+
+## Testing
+
+Static validation:
+
+```sh
+docker compose --env-file .env.example config
+docker compose --env-file .env.example config --services
+```
+
+Start non-VPN services after `.env` points to real local paths:
+
+```sh
+docker compose up -d jellyfin prowlarr sonarr radarr lidarr bazarr flaresolverr seerr musicseerr
+```
+
+Start the VPN path after NordVPN OpenVPN files are in place:
+
+```sh
+docker compose up -d vpn qbittorrent
+docker compose logs -f vpn
+docker compose logs qbittorrent
+```
+
+VPN validation:
+
+- Open qBittorrent at `http://localhost:8080`.
+- Add a torrent IP-check magnet.
+- Confirm the reported torrent IP is a NordVPN exit IP, not your home ISP IP.
+
+End-to-end validation:
+
+1. Add a public-domain test movie in Radarr.
+2. Confirm Radarr sends it to qBittorrent.
+3. Confirm qBittorrent downloads through the VPN path.
+4. Confirm Radarr imports it under `/MediaCenterBox/Completed/Movies`.
+5. Confirm Jellyfin displays it in the Movies library.
+6. Confirm Bazarr sees the imported media.
+7. Confirm Lidarr and MusicSeerr can request and import a test album.
+
+![Testing placeholder](img/placeholder-screenshot.svg)
+
+_Screenshot placeholder: replace this with the qBittorrent and Jellyfin test results after validation._
+
+## Remote Access
+
+This stack does not include a remote-access VPN container.
+
+Use your existing away-to-home VPN to join your home network first. After that, access the same LAN service URLs you use at home:
+
+```text
+Jellyfin:     http://SERVER-IP:8096
+qBittorrent: http://SERVER-IP:8080
+Prowlarr:    http://SERVER-IP:9696
+Sonarr:      http://SERVER-IP:8989
+Radarr:      http://SERVER-IP:7878
+Lidarr:      http://SERVER-IP:8686
+Bazarr:      http://SERVER-IP:6767
+Seerr:       http://SERVER-IP:5055
+MusicSeerr:  http://SERVER-IP:8688
+```
+
+Avoid exposing these web UIs directly to the public internet.
+
+## Useful Commands
+
+Check running containers:
+
+```sh
+docker container ls --format "{{.Names}} || state {{.State}} {{.Status}} || ID {{.ID}}"
+```
+
+Start the stack:
+
+```sh
+docker compose up -d
+```
+
+Restart one service:
+
+```sh
+docker compose restart SERVICE_NAME
+```
+
+Follow logs:
+
+```sh
+docker compose logs -f SERVICE_NAME
+```
+
+Update images:
+
+```sh
+docker compose pull
+docker compose up -d
+```
 
 ## Thanks
+
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/rick45)
 
 ## Star History

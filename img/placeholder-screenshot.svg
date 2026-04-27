@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Screenshot placeholder</title>
+  <desc id="desc">Temporary placeholder image for documentation screenshots.</desc>
+  <rect width="1280" height="720" fill="#f3f5f7"/>
+  <rect x="72" y="72" width="1136" height="576" rx="8" fill="#ffffff" stroke="#c9d1d9" stroke-width="4"/>
+  <rect x="112" y="122" width="1056" height="64" rx="6" fill="#d8dee4"/>
+  <rect x="112" y="226" width="460" height="34" rx="4" fill="#afb8c1"/>
+  <rect x="112" y="288" width="736" height="24" rx="4" fill="#d8dee4"/>
+  <rect x="112" y="332" width="656" height="24" rx="4" fill="#d8dee4"/>
+  <rect x="112" y="404" width="1056" height="152" rx="6" fill="#f6f8fa" stroke="#d0d7de" stroke-width="3"/>
+  <text x="640" y="489" text-anchor="middle" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#57606a">Screenshot placeholder</text>
+  <text x="640" y="536" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#6e7781">Replace after the stack is running</text>
+</svg>
