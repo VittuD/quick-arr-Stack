@@ -45,18 +45,6 @@ Only qBittorrent is routed through the VPN sidecar. The other services stay on t
 
 ## Architecture
 
-```text
-Prowlarr -> Sonarr/Radarr/Lidarr -> qBittorrent -> VPN sidecar -> Internet
-                                    |
-                                    v
-                           shared media storage
-                                    |
-                 Bazarr -> subtitles -> Jellyfin
-                                    ^
-                                    |
-                         Seerr / MusicSeerr
-```
-
 ![Architecture overview](img/architecture_overview.svg)
 
 ## Prerequisites
