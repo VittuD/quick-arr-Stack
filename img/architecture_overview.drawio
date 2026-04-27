@@ -1,0 +1,146 @@
+<mxfile host="app.diagrams.net" modified="2026-04-27T12:10:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="quick-arr-architecture" name="Architecture Overview">
+    <mxGraphModel dx="1800" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title_requests" value="Request Layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="70" y="70" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="title_automation" value="Automation Layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="350" y="70" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="title_download" value="Download Layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="70" width="170" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="title_library" value="Library Layer" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="510" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="seerr" value="Seerr&#xa;Movies + TV Requests&#xa;(optional)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="210" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="musicseerr" value="MusicSeerr&#xa;Music Requests&#xa;(optional)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="360" width="210" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="prowlarr" value="Prowlarr&#xa;Indexer Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="120" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="flaresolverr" value="FlareSolverr&#xa;(optional)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="620" y="270" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sonarr" value="Sonarr&#xa;TV Automation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="330" y="140" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="radarr" value="Radarr&#xa;Movie Automation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="330" y="270" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="lidarr" value="Lidarr&#xa;Music Automation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="330" y="400" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="bazarr" value="Bazarr&#xa;Subtitles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="360" y="580" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="internet" value="Internet" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="110" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="vpn" value="NordVPN OpenVPN Sidecar&#xa;(vpn)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="240" width="260" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="qbittorrent" value="qBittorrent&#xa;(network_mode: service:vpn)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1075" y="390" width="290" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="storage" value="Shared Storage&#xa;/MediaCenterBox&#xa;Downloads + Completed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="710" y="560" width="260" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jellyfin" value="Jellyfin&#xa;Playback Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1085" y="575" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="remote" value="Local LAN /&#xa;Away-to-home VPN access" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1430" y="575" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;" edge="1" parent="1" source="vpn" target="internet">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;" edge="1" parent="1" source="qbittorrent" target="vpn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" value="TV requests" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="seerr" target="sonarr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="movie requests" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="seerr" target="radarr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="music requests" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="musicseerr" target="lidarr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" value="indexers" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="prowlarr" target="sonarr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="indexers" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="prowlarr" target="radarr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="indexers" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="prowlarr" target="lidarr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="CF-protected indexers" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="flaresolverr" target="prowlarr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e10" value="downloads" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="sonarr" target="qbittorrent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="downloads" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="radarr" target="qbittorrent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="downloads" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="lidarr" target="qbittorrent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e13" value="imports" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="sonarr" target="storage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="imports" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="radarr" target="storage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="imports" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="lidarr" target="storage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="subtitles" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="bazarr" target="storage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="downloads / completed" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="qbittorrent" target="storage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="libraries" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;" edge="1" parent="1" source="storage" target="jellyfin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e19" value="media discovery" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="seerr" target="jellyfin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" value="media discovery" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="musicseerr" target="jellyfin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e21" value="web UIs" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="remote" target="jellyfin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" value="" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="remote" target="seerr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" value="" style="orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="remote" target="musicseerr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

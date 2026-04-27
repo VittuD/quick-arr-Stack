@@ -57,9 +57,7 @@ Prowlarr -> Sonarr/Radarr/Lidarr -> qBittorrent -> VPN sidecar -> Internet
                          Seerr / MusicSeerr
 ```
 
-![Architecture placeholder](img/placeholder-screenshot.svg)
-
-_Screenshot placeholder: replace this after the qBittorrent, Jellyfin, and Seerr setup has been validated._
+![Architecture overview](img/architecture_overview.svg)
 
 ## Prerequisites
 
